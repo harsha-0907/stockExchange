@@ -110,5 +110,5 @@ async def newTransaction(transactionRequest: TransactionIn):
     statusCode = pushTransaction(transactionRequest.dict())
     if statusCode == 200:
         return formatResponse(statusCode=statusCode, description="Transaction Accepted", resource="transaction", state="action:transaction")
-    return response
+    return formatResponse(statusCode=statusCode)
     
