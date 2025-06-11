@@ -1,0 +1,59 @@
+// Data Model from user to server
+{
+    "uId": "user1",
+    "stockId": "btc",
+    "side": "buy",
+    "orderType": "limit",
+    "quantity": 5.0,
+    "pricePerUnit": 100.00
+}
+// Data Model from server to dbQueue
+{
+    "tId": "t12345",
+    "uId": "user1",
+    "stockId": "btc",
+    "side": "buy",
+    "orderType": "limit",
+    "quantity": 5.0,
+    "pricePerUnit": 100.00,
+    "status": "RECIEVED",
+    "timeStamp": 34234343423
+}
+
+// Message going from user to transactionQueue
+{
+    "tId": "t12345",
+    "uId": "user1",
+    "stockId": "btc",
+    "side": "buy",
+    "orderType": "limit",
+    "quantity": 5.0,
+    "pricePerUnit": 100.00,
+    "status": "RECIEVED",
+    "action": "transaction",
+    "timeStamp": 34938274923423
+}
+
+// Message to add a new stock 
+{
+    "action": "addStock",
+    "stockId": "btc",
+    "stockQueue": queue_obj
+}
+
+// Message to remove a stock from engine
+{
+    "action": "removeStock",
+    "stockId": "btc"
+}
+
+// User-Data
+{
+    "uId": {
+        "walletBalance": 100.00,
+        "stocks": {
+            "btc": 100.00,
+            "eth": 250.00
+        }
+    }
+}
