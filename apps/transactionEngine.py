@@ -2,7 +2,8 @@
 import time
 from queue import Empty as QueueEmpty
 from multiprocessing import Queue, Manager, Process, Event
-from apps.database import transactionDb
+from apps.database import transactionDb, internalTransactionDb
+
 
 class StockAggregator:
     """
@@ -33,8 +34,8 @@ class StockAggregator:
     def initializeProcesses(self):
         def initializeDBProcess():
             def updateTransaction(queue: Queue, transactionsDb, logQueue, shutdownEvent):
+                transactionBatch = []; startTime = time.time()
                 try:
-                    transactionBatch = []; startTime = time.time()
                     while True:
                         try:
                             if shutdownEvent.is_set():
@@ -58,9 +59,7 @@ class StockAggregator:
                     print("Exit Initiated, flushing transactions")
                     if transactionBatch:
                         print("Flushing Transactions")
-                        with engine.connect() as conn:
-                                with conn.begin():
-                                    conn.execute(stmt, transactionBatch)
+                        transactionsDb.insert_multiple(transactionBatch)
                     print("Exiting Update-Transaction")
 
             process = Process(target=updateTransaction, args=(self.dbQueue, transactionDb, self.logQueue, self.shutdownEvent))
@@ -121,9 +120,46 @@ class StockAggregator:
             self.processes.append(process)
             return True
 
+        def initializeInternalTransactionProcess():
+            def internalTransactions(queue: Queue, internalTransactionsDb, logQueue, shutdownEvent):
+                transactionBatch = []; startTime = time.time()
+                try:
+                    while True:
+                        try:
+                            if shutdownEvent.is_set():
+                                break
+                            transactionRequest = queue.get(timeout=0.01)
+                            transactionBatch.append(transactionRequest)
+                        
+                        except QueueEmpty as _qe:
+                            pass
+
+                        if (time.time() - startTime > 0.1 and len(transactionBatch) > 0) or len(transactionBatch) > 100:
+                            transactionDb.insert_multiple(transactionBatch)
+                            transactionBatch = []
+                            startTime = time.time()
+
+                except Exception as _e:
+                    print("Error has occured", str(_e))
+                    logQueue.put("Update-Transaction" + str(_e))
+                
+                finally:
+                    print("Exit Initiated, flushing transactions")
+                    if transactionBatch:
+                        print("Flushing Transactions")
+                        internalTransactionDb.insert_multiple(transactionBatch)
+                    print("Exiting Update-Transaction")
+
+            process = Process(target=internalTransactions, args=(self.transactionQueue, internalTransactionDb, self.logQueue, self.shutdownEvent))
+            process.start()
+            self.processes.append(process)
+            return True
+
+
         self.processes = []; self.stockProcesses = {}
         initializeDBProcess()
         initializeSegregator()
+        initializeInternalTransactionProcess()
 
     def addStock(self, stockId):
         if stockId in self.tradedStocks:
@@ -154,7 +190,6 @@ class TransactionEngine(StockAggregator):
     def addNewProcess(self, stockId, stockQueue, logQueue):
         # This function adds new processes
         pass
-        
 
 me = TransactionEngine()
 
