@@ -1,1 +1,0 @@
-{"_default": {"1": {"uId": "user1", "amount": 1000000.0, "action": "add", "message": "Amount Credited Successfully"}, "2": {"uId": "user1", "amount": 1.0, "action": "withdraw", "message": "Withdrawal Successful"}}}

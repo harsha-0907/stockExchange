@@ -2,3 +2,4 @@ __pycache__
 .idx
 .venv
 .vscode
+.json
