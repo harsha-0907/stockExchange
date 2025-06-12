@@ -1,5 +1,6 @@
 
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 import apps.database as db
 from apps.transactionEngine import me
@@ -14,6 +15,14 @@ async def lifespan(app: FastAPI):
     me.stopProcesses()
 
 app = FastAPI(lifespan=lifespan)
+
+@app.middleware("http")
+def calculateProcessingTime(request: Request, call_next):
+    startTime = time.time()
+    response = call_next(request)
+    print("\n\nProcesing Time - ", time.time() - startTime)
+    return response
+
 app.include_router(user.router, prefix="/user", tags=["user"])
 
 @app.get("/")
