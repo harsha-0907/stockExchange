@@ -135,7 +135,7 @@ class TransactionEngine(StockAggregator):
             print("Adding Stock", stockId)
             self.isWorking = self.addStock(stockId) and self.isWorking
 
-        self.users["admin"]: {"walletBalance": 10000000, "stocks": {"btc": 100000}}
+        self.users["admin"] = {"walletBalance": 10000000, "stocks": {"btc": 100000}}
         initRequest = {
             "tId": "t12345",
             "uId": "admin",
