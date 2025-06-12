@@ -495,16 +495,19 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             iocPrice = transactions["sell"][0][0]
             while numberOfSharesRequired > 0 and len(transactions["sell"]) > 0 and iocPrice <= transactions["sell"][0][0]:
                 sellingPrice, sellingTimeStamp, sellRequest = heapq.heappop(transactions["sell"])
-                numberOfSharesToSell = sellRequest.get("pricePerUnit")
+                numberOfSharesToSell = sellRequest.get("quantity")
                 sellerId, sellerTid = sellRequest.get("uId"), sellRequest.get("tId")
 
                 numberOfSharesInTransaction = min(numberOfSharesToSell, numberOfSharesRequired)
+                print(numberOfSharesToSell, numberOfSharesRequired, numberOfSharesInTransaction)
                 numberOfSharesToSell -= numberOfSharesInTransaction
                 numberOfSharesRequired -= numberOfSharesInTransaction
 
                 priceOfThisTransaction = numberOfSharesInTransaction * sellingPrice
                 totalSharesBrought += numberOfSharesInTransaction
                 totalAmount += priceOfThisTransaction
+
+                transactions["marketPrice"] = sellingPrice
 
                 if numberOfSharesToSell > 0:
                     # Add the transaction back to the heap
@@ -622,6 +625,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
 
                 priceOfThisTransaction = stocksInThisTransaction * buyingPrice
                 totalAmountRecieved += priceOfThisTransaction
+                transactions["marketPrice"] = buyingPrice
 
                 if numberOfStocksRequired > 0:
                     buyRequest["quantity"] = numberOfStocksRequired
@@ -810,6 +814,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                         "quantity": stocksInThisTransaction * sellingPrice
                     }
 
+                    transactions["marketPrice"] = sellingPrice
                     internalTransactions.append(internalTransactionRequest)
                     dbTransactions.append(dbTransactionRequest)
                     userTransactions.append(userTransactionRequest)
@@ -956,6 +961,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                     "quantity": stocksInThisTransaction * buyingPrice
                 }
 
+                transactions["marketPrice"] = buyingPrice
                 internalTransactions.append(internalTransactionRequest)
                 dbTransactions.append(dbTransactionRequest)
                 userTransactions.append(userTransactionRequest)
@@ -983,7 +989,6 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             userTransactions.append(userTransactionRequest)
 
             return internalTransactions, dbTransactions, userTransactions
-
 
     transactions = {"buy":[], "sell": [], "marketPrice": 0.0}
     try:
