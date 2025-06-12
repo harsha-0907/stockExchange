@@ -1,8 +1,21 @@
 import time
+import traceback
 from queue import Empty as QueueEmpty
 import heapq
+import json
 
-def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEvent):
+def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEvent):
+    def loadTransactions(stockId):
+        data = {}
+        with open(f"database/stocks/{stockId}.json", 'r') as file:
+            data = json.load(file)
+        return data
+    
+    def writeTransactions(stockId, transactions):
+        with open(f"database/stocks/{stockId}.json", 'w') as file:
+            json.dump(transactions, file, indent=4)
+        print("Data Written Successfully")
+
     def marketTransaction(request):
         nonlocal transactions, stockId
         side = request.get("side")
@@ -30,7 +43,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
                 if stocksAvaliableInThisTransaction > 0:
                     # Update this back to the heap
                     sellRequest["quantity"] = stocksAvaliableInThisTransaction
-                    heapq.heappush(transactions["sell"], (sellingPrice, sellingTimeStamp, sellRequest))
+                    heapq.heappush(transactions["sell"], [sellingPrice, sellingTimeStamp, sellRequest])
 
                 sellerId, sellerTid = sellRequest.get("uId"), sellRequest.get("tId")
                 internalTransactionRequest = {
@@ -147,7 +160,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
                 if numberOfStocksRequired > 0:
                     # Push the transaction back to the heap
                     buyRequest["quantity"] = numberOfStocksRequired
-                    heapq.heappush(transactions["buy"], (-buyingPrice, buyingTimeStamp, buyRequest))
+                    heapq.heappush(transactions["buy"], [-buyingPrice, buyingTimeStamp, buyRequest])
                 
                 buyerId, buyerTid = buyRequest.get("uId"), buyRequest.get("tId")
                 internalTransactionRequest = {
@@ -267,7 +280,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
 
                 if numberOfStocksToSell > 0:
                     sellRequest["quantity"] = numberOfStocksToSell
-                    heapq.heappush(transactions["sell"], (sellingPrice, sellingTimeStamp, sellRequest))
+                    heapq.heappush(transactions["sell"], [sellingPrice, sellingTimeStamp, sellRequest])
                 
                 sellerId, sellerTid = sellRequest.get("uId"), sellRequest.get("tId")
                 internalTransactionRequest = {
@@ -305,7 +318,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
                 userTransactions.append(userTransactionRequest)
             
             if totalNumberOfStocksBrought == 0:
-                heapq.heappush(transactions["buy"], (-request.get("pricePerUnit"), request.get("timeStamp"), request))
+                heapq.heappush(transactions["buy"], [-request.get("pricePerUnit"), request.get("timeStamp"), request])
                 return [], [], []
 
             dbTransactionRequest = {
@@ -324,7 +337,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
             
             if numberOfStocksRequired > 0:
                 request["quantity"] = numberOfStocksRequired
-                heapq.heappush(transactions["buy"], (-request.get("pricePerUnit"), request.get("timeStamp"), request))
+                heapq.heappush(transactions["buy"], [-request.get("pricePerUnit"), request.get("timeStamp"), request])
             
             userTransactionRequest = {
                 "action": "add",
@@ -372,7 +385,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
 
                 if numberOfStocksRequired > 0:
                     buyRequest["quantity"] = numberOfStocksRequired
-                    heapq.heappush(transactions["buy"], (-buyingPrice, buyingTimeStamp, buyRequest))
+                    heapq.heappush(transactions["buy"], [-buyingPrice, buyingTimeStamp, buyRequest])
 
                 internalTransactionRequest = {
                     "stockId": stockId,
@@ -410,7 +423,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
                 userTransactions.append(userTransactionRequest)
             
             if numberOfStocksSold == 0:
-                heapq.heappush(transactions["sell"], (request.get("pricePerUnit"), request.get("timeStamp"), request))
+                heapq.heappush(transactions["sell"], [request.get("pricePerUnit"), request.get("timeStamp"), request])
                 return [], [], []
             
             dbTransactionRequest = {
@@ -428,7 +441,7 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
 
             if numberOfStocksToSell > 0:
                 request["quantity"] = numberOfStocksToSell
-                heapq.heappush(transactions["sell"], (request.get("pricePerUnit"), request.get("timeStamp"), request))
+                heapq.heappush(transactions["sell"], [request.get("pricePerUnit"), request.get("timeStamp"), request])
             
             userTransactionRequest = {
                 "action": "add",
@@ -447,16 +460,19 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
     def iocTransaction(request):
         return [], [], []
 
+    transactions = {"buy":[], "sell": [], "marketPrice": 0.0}
     try:
-        transactions = {"buy":[], "sell": [], "marketPrice": 0.0}
-        while True:
-            if shutdownEvent.is_set():
-                break
+        pastTransactions = loadTransactions(stockId)
+        if  pastTransactions:
+            transactions = pastTransactions
+            
+        mainTransactions["data"] = transactions
+        while not shutdownEvent.is_set():
             request = None
             try:
                 request = queue.get(timeout=0.01)
             except QueueEmpty as qe:
-                print("No Transaction recieved, Lets wait!")
+                # print("No Transaction recieved, Lets wait!")
                 continue
             
             if request is None:
@@ -475,6 +491,13 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
                 # Un-known order type
                 print("Recieved Unknown order type: ", request)
             
+
+            
+            mainTransactions["data"] = transactions
+
+            print("Request: ", request)
+            print(transactions)
+            print(internalTxns, dbTxns, userTxns)
             if dbTxns:
                 for txn in dbTxns:
                     dbQueue.put(txn)
@@ -510,12 +533,13 @@ def matchingEngine(stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEv
                             userData["walletBalance"] += amount
                         else:
                             userData["walletBalance"] -= amount
-
                     users[uId] = userData
-                    
 
     except Exception as _e:
         logQueue.put(f"Exception at transaction-engine {stockId}: {str(_e)}")
+        print("Exception :", str(_e))
+        print("Traceback: ", traceback.format_exc())
     
     finally:
-        print("Exiting")
+        writeTransactions(stockId, transactions)
+        print("Exiting Matching Engine - ", stockId)

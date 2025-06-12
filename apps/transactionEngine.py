@@ -4,7 +4,6 @@ from multiprocessing import Queue, Manager, Process, Event
 from apps.database import transactionDb, internalTransactionDb
 from apps.matchingEngine import matchingEngine
 
-
 class StockAggregator:
     def __init__(self):
         self.numberOfUsers = 0
@@ -13,12 +12,14 @@ class StockAggregator:
         self.tradedStocks = []
         self.manager = Manager()
         self.users = self.manager.dict()
-        self.stockQueues = self.manager.dict()  # ✅ Shared across processes
+        self.stockQueues = self.manager.dict()
+        self.stockTransactions = self.manager.dict()
 
     def initializeQueues(self):
         self.dbQueue = Queue()
         self.logQueue = Queue()
         self.transactionQueue = Queue()
+        self.internalTransactionQueue = Queue()
 
     def initializeProcesses(self):
         def initializeDBProcess():
@@ -56,13 +57,17 @@ class StockAggregator:
                             time.sleep(0.1)
                             continue
 
+                        print(request)
                         action = request.get("action")
                         if action == "transaction":
                             stockId = request.get("stockId")
                             if stockId in stockQueues:
+                                print("Recieved request to :", stockId)
                                 stockQueues[stockId].put(request)
+                                print("Sent the request")
                         elif action == "addStock":
                             # No need to do anything here; stockQueues already updated
+                            print("Added New Stock")
                             pass
                         elif action == "removeStock":
                             stockId = request.get("stockId")
@@ -98,7 +103,7 @@ class StockAggregator:
                         internalTransactionsDb.insert_multiple(transactionBatch)
 
             process = Process(target=internalTransactions,
-                              args=(self.transactionQueue, internalTransactionDb, self.logQueue, self.shutdownEvent))
+                              args=(self.internalTransactionQueue, internalTransactionDb, self.logQueue, self.shutdownEvent))
             process.start()
             self.processes.append(process)
 
@@ -110,11 +115,16 @@ class StockAggregator:
 
     def stopProcesses(self):
         self.shutdownEvent.set()
-        time.sleep(0.5)
+        time.sleep(3)
         for process in self.processes:
-            process.terminate()
-            process.join()
+            process.join(timeout=2)
 
+            if process.is_alive():
+                process.terminate()
+                process.join()
+                print("Force Shutdown")
+            else:
+                print("Clean Exit")
 
 class TransactionEngine(StockAggregator):
     def __init__(self, initialStocks=["btc"]):
@@ -122,12 +132,27 @@ class TransactionEngine(StockAggregator):
         self.initializeQueues()
         self.initializeProcesses()
         for stockId in initialStocks:
-            print("New Stock", stockId)
+            print("Adding Stock", stockId)
             self.isWorking = self.addStock(stockId) and self.isWorking
 
-    def addNewProcess(self, stockId, stockQueue, logQueue, internalQueue, dbQueue):
+        self.users["admin"]: {"walletBalance": 10000000, "stocks": {"btc": 100000}}
+        initRequest = {
+            "tId": "t12345",
+            "uId": "admin",
+            "stockId": "btc",
+            "side": "sell",
+            "orderType": "limit",
+            "quantity": 10000,
+            "pricePerUnit": 100,
+            "status": "RECIEVED",
+            "action": "transaction",
+            "timeStamp": time.time()
+        }
+        self.transactionQueue.put(initRequest)
+
+    def addNewProcess(self, stockId, stockQueue, logQueue, internalQueue, dbQueue, stockTransaction):
         process = Process(target=matchingEngine,
-                          args=(stockId, stockQueue, dbQueue, internalQueue, logQueue, self.users, self.shutdownEvent))
+                          args=(stockTransaction, stockId, stockQueue, dbQueue, internalQueue, logQueue, self.users, self.shutdownEvent))
         process.start()
         self.processes.append(process)
         return True
@@ -137,15 +162,17 @@ class TransactionEngine(StockAggregator):
             return False
 
         stockQueue = self.manager.Queue()
-        self.stockQueues[stockId] = stockQueue  # ✅ Shared dict is updated here
+        self.stockQueues[stockId] = stockQueue
+        stockTransaction = self.manager.dict()
+        self.stockTransactions[stockId] = stockTransaction
 
         request = {
             "action": "addStock",
-            "stockId": stockId  # ✅ Only send stockId — not the queue
+            "stockId": stockId
         }
         self.transactionQueue.put(request)
-
         self.tradedStocks.append(stockId)
+        self.addNewProcess(stockId, stockQueue, self.logQueue, self.internalTransactionQueue, self.dbQueue, stockTransaction)
         return True
 
 

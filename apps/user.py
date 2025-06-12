@@ -65,7 +65,7 @@ def pushTransaction(transactionRequest):
         print("Error in Push Transaction :", str(_e))
         return 500
 
-@router.get("user/new")
+@router.get("/new")
 async def newUser():
     # Add the user into the database and add into the TransactionEngine
     uId = "user" + str(me.numberOfUsers + 1)
@@ -73,7 +73,7 @@ async def newUser():
     me.users[uId] = {"walletBalance": 0.00, "stocks": {}}
     return uId
 
-@router.get("user/finance/add")
+@router.get("/finance/add")
 async def addMoney(amount: float, uId: str):
     if uId not in me.users:
         return formatResponse(statusCode=401)
@@ -87,7 +87,7 @@ async def addMoney(amount: float, uId: str):
     print(me.users[uId])
     return formatResponse(statusCode=200, description="Amount Added to wallet", resource="wallet", state="finance:add")
 
-@router.get("user/finance/withdraw")
+@router.get("/finance/withdraw")
 async def withrawMoney(amount: float, uId: str):
     if uId not in me.users:
         return formatResponse(statusCode=401)
@@ -112,3 +112,12 @@ async def newTransaction(transactionRequest: TransactionIn):
         return formatResponse(statusCode=statusCode, description="Transaction Accepted", resource="transaction", state="action:transaction")
     return formatResponse(statusCode=statusCode)
     
+@router.get("/details")
+async def fetchBalance(uId: str):
+    userData = me.users[uId]
+    return userData
+
+@router.get("/stock/fetchBBO")
+async def fetchBBO(stockId: str):
+    stockData = me.stockTransactions[stockId]["data"]
+    return stockData
