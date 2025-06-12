@@ -127,29 +127,15 @@ class StockAggregator:
                 print("Clean Exit")
 
 class TransactionEngine(StockAggregator):
-    def __init__(self, initialStocks=["btc"]):
+    def __init__(self, initialStocks=["btc"], minStocks = 100000):
         super().__init__()
         self.initializeQueues()
         self.initializeProcesses()
+        self.users["admin"] = {"walletBalance": 10000000, "stocks": {}}
         for stockId in initialStocks:
             print("Adding Stock", stockId)
             self.isWorking = self.addStock(stockId) and self.isWorking
-
-        self.users["admin"] = {"walletBalance": 10000000, "stocks": {"btc": 100000}}
-        initRequest = {
-            "tId": "t12345",
-            "uId": "admin",
-            "stockId": "btc",
-            "side": "sell",
-            "orderType": "limit",
-            "quantity": 10000,
-            "pricePerUnit": 100,
-            "status": "RECIEVED",
-            "action": "transaction",
-            "timeStamp": time.time()
-        }
-        self.transactionQueue.put(initRequest)
-
+        
     def addNewProcess(self, stockId, stockQueue, logQueue, internalQueue, dbQueue, stockTransaction):
         process = Process(target=matchingEngine,
                           args=(stockTransaction, stockId, stockQueue, dbQueue, internalQueue, logQueue, self.users, self.shutdownEvent))
@@ -173,7 +159,23 @@ class TransactionEngine(StockAggregator):
         self.transactionQueue.put(request)
         self.tradedStocks.append(stockId)
         self.addNewProcess(stockId, stockQueue, self.logQueue, self.internalTransactionQueue, self.dbQueue, stockTransaction)
+        initRequest = {
+            "tId": "1234567890123",
+            "uId": "admin",
+            "stockId": stockId,
+            "side": "sell",
+            "orderType": "limit",
+            "quantity": 100000,
+            "pricePerUnit": 100,
+            "status": "RECIEVED",
+            "action": "transaction",
+            "timeStamp": time.time()
+        }
+        self.dbQueue.put(initRequest)
+        self.transactionQueue.put(initRequest)
+        adminData = self.users["admin"]
+        adminData["stocks"][stockId] = 0
+        self.users["admin"] = adminData
         return True
-
 
 me = TransactionEngine()
