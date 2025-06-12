@@ -29,7 +29,7 @@ def pushTransaction(transactionRequest):
             pricePerUnit = transactionRequest.get("pricePerUnit")
             quantityOfTransaction = transactionRequest.get("quantity")
             walletBalance = userData.get("walletBalance")
-            if walletBalance <= pricePerUnit * quantityOfTransaction:
+            if walletBalance <= pricePerUnit * quantityOfTransaction + 10:  # Transaction Fees
                 return 403
             
             # User can buy the stock
@@ -58,6 +58,7 @@ def pushTransaction(transactionRequest):
                 transactionRequest["action"] = "transaction"
                 me.transactionQueue.put(transactionRequest)
                 userData["stocks"][stockId] -= quantityOfTransaction
+                userData["walletBalance"] -= 10 # Transaction Fees
                 me.users[uId] = userData
         return 200
 
@@ -119,5 +120,7 @@ async def fetchBalance(uId: str):
 
 @router.get("/stock/fetchBBO")
 async def fetchBBO(stockId: str):
+    if stockId not in me.stockTransactions:
+        return formatResponse(404)
     stockData = me.stockTransactions[stockId]["data"]
     return stockData
