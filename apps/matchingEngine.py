@@ -7,9 +7,13 @@ import json
 def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue, users, shutdownEvent):
     def loadTransactions(stockId):
         data = {}
-        with open(f"database/stocks/{stockId}.json", 'r') as file:
-            data = json.load(file)
-        return data
+        try:
+            with open(f"database/stocks/{stockId}.json", 'r') as file:
+                data = json.load(file)
+        except Exception as _e:
+            pass
+        finally:
+            return data
     
     def writeTransactions(stockId, transactions):
         with open(f"database/stocks/{stockId}.json", 'w') as file:
@@ -458,6 +462,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
         return [], [], []
 
     def iocTransaction(request):
+        
         return [], [], []
 
     transactions = {"buy":[], "sell": [], "marketPrice": 0.0}
@@ -508,6 +513,8 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             
             if userTxns:
                 for txn in userTxns:
+                    if isinstance(txn, list):
+                        txn = txn[0]
                     uId = txn.get("uId")
                     userData = users[uId]
                     resource = txn.get("resource")
