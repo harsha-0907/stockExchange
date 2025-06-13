@@ -24,8 +24,20 @@ Micro-Service Architecture
 5. Install the necessary packages using `pip install -r requirments.txt`
 6. Run the code using `python3 app.py`
 
-Now Head to `http://localhost:8000/docs` in your local system or 'http://your_ip_address:8000/docs` for any system in the network
+Now Head to `http://localhost:8000/docs` in your 
 
-There you have the CryptoEngine!!!
+### Benchmarking:
+    Remote Client:
+        Number of Transactions : 1000
+        Successful Transactions: 1000
+        Rejected Transactions: 0
+        Total Time Taken: 19.904207468032837
+        Average Time Per Request: 190 ms
+
+    Server-Side:
+        Average Time     : 2.502 µs
+        Total Time       : 2501.653 µs
+        Total Requests   : 1000
+
 
 Feel Free to add a million to your account :)
