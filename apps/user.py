@@ -127,7 +127,7 @@ async def fetchBBO(stockId: str):
     return stockData
 
 @router.get("/transaction/details")
-async def fetchTransactionDetails(uId: str, tId: str):
+async def fetchTransactionDetails(uId: str = None, tId: str = None):
     query = Query()
     if uId and tId:
         results = transactionDb.search((query.tId == tId) & (query.uId == uId))
@@ -142,5 +142,3 @@ async def fetchTransactionDetails(uId: str, tId: str):
         results = formatResponse(statusCode=404, description="Fields missing. Require atleast transactionId or userId", resource="input", state="input:fieldsmissing")
     
     return results
-
-
