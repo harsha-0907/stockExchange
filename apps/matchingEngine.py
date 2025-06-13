@@ -562,6 +562,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                 "status": "PARTIAL" if numberOfSharesRequired > 0 else "COMPLETED",
                 "timeStamp": timeStamp
             }
+            dbTransactions.append(dbTransactionRequest)
 
             amountDiff = totalNumberOfSharesRequired * maxBuyingPrice - totalAmount
             if amountDiff != 0:
@@ -1023,9 +1024,9 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             
             mainTransactions["data"] = transactions
 
-            print("Request: ", request)
-            print(transactions)
-            print(internalTxns, dbTxns, userTxns)
+            # print("Request: ", request)
+            # print(transactions)
+            # print(internalTxns, dbTxns, userTxns)
             if dbTxns:
                 for txn in dbTxns:
                     dbQueue.put(txn)
