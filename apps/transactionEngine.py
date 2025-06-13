@@ -57,17 +57,17 @@ class StockAggregator:
                             time.sleep(0.1)
                             continue
 
-                        print(request)
+                        # print(request)
                         action = request.get("action")
                         if action == "transaction":
                             stockId = request.get("stockId")
                             if stockId in stockQueues:
-                                print("Recieved request to :", stockId)
+                                # print("Recieved request to :", stockId)
                                 stockQueues[stockId].put(request)
-                                print("Sent the request")
+                                # print("Sent the request")
                         elif action == "addStock":
                             # No need to do anything here; stockQueues already updated
-                            print("Added New Stock")
+                            # print("Added New Stock")
                             pass
                         elif action == "removeStock":
                             stockId = request.get("stockId")
