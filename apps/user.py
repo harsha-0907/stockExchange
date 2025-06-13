@@ -1,8 +1,9 @@
 
 import time
 from uuid import uuid4
+from tinydb import Query
 from apps.transactionEngine import me
-from apps.database import financeDb
+from apps.database import financeDb, transactionDb
 from fastapi import APIRouter
 from apps.helperFunctions import formatResponse
 from models import TransactionIn
@@ -124,3 +125,22 @@ async def fetchBBO(stockId: str):
         return formatResponse(404)
     stockData = me.stockTransactions[stockId]["data"]
     return stockData
+
+@router.get("/transaction/details")
+async def fetchTransactionDetails(uId: str, tId: str):
+    query = Query()
+    if uId and tId:
+        results = transactionDb.search((query.tId == tId) & (query.uId == uId))
+    
+    elif uId:
+        results = transactionDb.search((query.uId == uId))
+    
+    elif tId:
+        results = transactionDb.search((query.tId == tId))
+    
+    else:
+        results = formatResponse(statusCode=404, description="Fields missing. Require atleast transactionId or userId", resource="input", state="input:fieldsmissing")
+    
+    return results
+
+
