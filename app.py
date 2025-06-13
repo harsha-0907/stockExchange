@@ -8,6 +8,8 @@ from apps import user
 import uvicorn
 from sys import exit
 
+totalRequests = 0
+totalTimeTaken = 0
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting the Engine")
@@ -18,9 +20,17 @@ app = FastAPI(lifespan=lifespan)
 
 @app.middleware("http")
 def calculateProcessingTime(request: Request, call_next):
-    startTime = time.time()
+    global totalRequests, totalTimeTaken
+    start = time.perf_counter_ns()
     response = call_next(request)
-    print("\n\nProcesing Time - ", time.time() - startTime)
+    end = time.perf_counter_ns()
+    totalRequests += 1
+    totalTimeTaken += end-start
+
+    print("\n\nProcesing Time - ", end - start)
+    print("Average Time - ", totalTimeTaken / totalRequests)
+    print("Total Time : ", totalTimeTaken)
+    print("Total Requests : ", totalRequests)
     return response
 
 app.include_router(user.router, prefix="/user", tags=["user"])
