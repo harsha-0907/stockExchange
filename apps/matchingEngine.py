@@ -499,7 +499,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                 sellerId, sellerTid = sellRequest.get("uId"), sellRequest.get("tId")
 
                 numberOfSharesInTransaction = min(numberOfSharesToSell, numberOfSharesRequired)
-                print(numberOfSharesToSell, numberOfSharesRequired, numberOfSharesInTransaction)
+                # print(numberOfSharesToSell, numberOfSharesRequired, numberOfSharesInTransaction)
                 numberOfSharesToSell -= numberOfSharesInTransaction
                 numberOfSharesRequired -= numberOfSharesInTransaction
 
@@ -991,6 +991,124 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
 
             return internalTransactions, dbTransactions, userTransactions
 
+    def removeTransaction(request):
+        nonlocal stockId
+        tId, uId = request.get("tId"), request.get("uId")
+        side = request.get("side"); pos = 0
+        removedTransaction = None
+        userTransactions = []; dbTransactions = []
+        if side == "sell":
+            for _transaction in transactions[side]:
+                _, _, transactionRequest = _transaction
+                dbTransactionId = transactionRequest.get("tId")
+                if tId == dbTransactionId:
+                    _, _, removedTransaction = transactions[side].pop(pos)
+                    break
+                pos += 1
+            else:
+                # Cannot delete the transaction
+                return [], [], []
+            
+            # The transaction is cancelled
+            print(removedTransaction)
+            quantity = removedTransaction.get("quantity"),
+            dbTransactionRequest = {
+                "tId": removedTransaction.get("tId"),
+                "uId": removedTransaction.get("uId"),
+                "stockId": stockId,
+                "side": removedTransaction.get("side"),
+                "orderType": removedTransaction.get("orderType"),
+                "quantity": quantity,
+                "pricePerUnit": removedTransaction.get("pricePerUnit"),
+                "status": "CANCELLED"
+            }
+            dbTransactions.append(dbTransactionRequest)
+
+            # Add the stock to the user's wallet
+            userTransactionRequest = {
+                "action": "add",
+                "resource": "stock",
+                "stockId": stockId,
+                "uId": uId,
+                "quantity": quantity
+            }
+            userTransactions.append(userTransactionRequest)
+
+            # Remove the transaction fees from the user
+            userTransactionRequest = {
+                "action": "remove",
+                "resource": "money",
+                "uId": uId,
+                "quantity": 30  #Fixed charge for cancellation
+            }
+            userTransactions.append(userTransactionRequest)
+
+            # Add the money to the admin
+            userTransactionRequest = {
+                "action": "add",
+                "resource": "money",
+                "uId": "admin",
+                "quantity": 30  #Fixed charge for cancellation
+            }
+            userTransactions.append(userTransactionRequest)
+
+            heapq.heapify(transactions["sell"])
+
+            return [], dbTransactions, userTransactions
+        
+        else:
+            removeTransaction = None
+            for _transaction in transactions[side]:
+                _, _, transactionRequest = _transaction
+                dbTransactionId = transactionRequest.get("tId")
+                if tId == dbTransactionId:
+                    _, _, removedTransaction = transactions[side].pop(pos)
+                    break
+                pos += 1
+            else:
+                # The transaction is already complete
+                return [], [], []
+
+            # The transaction will be cancelled
+            print(removedTransaction)
+            numberOfShares = removedTransaction.get("quantity")
+            pricePerUnit = removedTransaction.get("pricePerUnit")
+
+            actualRefundAmount = numberOfShares * pricePerUnit
+            refundableAmount = actualRefundAmount - 30
+
+            dbTransactionRequest = {
+                "tId": removedTransaction.get("tId"),
+                "uId": removedTransaction.get("uId"),
+                "stockId": stockId,
+                "side": removedTransaction.get("side"),
+                "orderType": removedTransaction.get("orderType"),
+                "quantity": numberOfShares,
+                "pricePerUnit": removedTransaction.get("pricePerUnit"),
+                "status": "CANCELLED"
+            }
+            dbTransactions.append(dbTransactionRequest)
+
+            userTransactionRequest = {
+                "action": "add",
+                "resource": "stock",
+                "stockId": stockId,
+                "uId": uId,
+                "quantity": refundableAmount
+            }
+            userTransactions.append(userTransactionRequest)
+
+            userTransactionRequest = {
+                "action": "add",
+                "resource": "money",
+                "uId": "admin",
+                "quantity": 30
+            }
+            userTransactions.append(userTransactionRequest)
+            heapq.heapify(transactions["buy"])
+
+            return [], dbTransactions, userTransactions
+            
     transactions = {"buy":[], "sell": [], "marketPrice": 0.0}
     try:
         pastTransactions = loadTransactions(stockId)
@@ -1008,6 +1126,9 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             
             if request is None:
                 continue
+            if request.get("action") == "remove-transaction":
+                # print("Removeable Transaction", request)
+                InternalTxns, dbTxns, userTxns = removeTransaction(request)
             orderType = request.get("orderType")
             internalTxns, dbTxns, userTxns =[], [], []
             if orderType == "limit":
@@ -1029,6 +1150,8 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             # print(internalTxns, dbTxns, userTxns)
             if dbTxns:
                 for txn in dbTxns:
+                    if isinstance(txn, list):
+                        txn = txn[0]
                     dbQueue.put(txn)
             
             if internalTxns:
