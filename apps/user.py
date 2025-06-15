@@ -40,8 +40,11 @@ def pushTransaction(transactionRequest):
             transactionRequest["action"] = "transaction"
             # print(transactionRequest)
             me.transactionQueue.put(transactionRequest)
-            userData["walletBalance"] -= pricePerUnit * quantityOfTransaction
+            userData["walletBalance"] -= (pricePerUnit * quantityOfTransaction) + 10
+            adminData = me.users["admin"]
+            adminData["walletBalance"] += 10
             me.users[uId] = userData
+            me.users["admin"] = adminData
         
         else:
             quantityOfTransaction = transactionRequest.get("quantity")
@@ -61,6 +64,10 @@ def pushTransaction(transactionRequest):
                 userData["stocks"][stockId] -= quantityOfTransaction
                 userData["walletBalance"] -= 10 # Transaction Fees
                 me.users[uId] = userData
+        
+        adminData = me.users["admin"]
+        adminData["walletBalance"] += 10
+        me.users["admin"] = adminData
         return 200
 
     except Exception as _e:
@@ -142,3 +149,35 @@ async def fetchTransactionDetails(uId: str = None, tId: str = None):
         results = formatResponse(statusCode=404, description="Fields missing. Require atleast transactionId or userId", resource="input", state="input:fieldsmissing")
     
     return results
+
+@router.delete("/transaction/delete")
+async def deleteTransaction(uId: str, tId: str):
+    transaction = Query()
+    results = transactionDb.search((transaction.tId == tId))
+
+    if len(results) == 0:
+        # No such transaction exists
+        return formatResponse(statusCode=404, description="No such transaction exists", resource="transaction", state="data:notfound")
+    
+    dbUid = results[0].get("uId")
+    if uId != dbUid:
+        # Not Authorized to perform this transaction
+        return formatResponse(statusCode=401, description="Not Authorized to perform this transaction", resource="transaction", state="action:unauth")
+
+    for result in results:
+        status = result.get("status")
+        if status == "COMPLETED" or status == "IN-COMPLETE":
+            return formatResponse(statusCode=401, description="Transaction already complete.", resource="transaction", state="action:unauth")
+
+    # All the updates will be done at the matching engine    
+    stockId = results[0].get("stockId"); side = results[0].get("side")
+    transactionRequest = {
+        "action": "remove-transaction",
+        "tId": tId,
+        "side": side,
+        "stockId": stockId
+    }
+    me.transactionQueue.put(transactionRequest)
+
+    return formatResponse(statusCode=200, description="Cancellation Reuqest Submitted", resource="transaction", state="action:success")
+      
