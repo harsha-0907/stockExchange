@@ -29,11 +29,13 @@ class StockAggregator:
                     while not shutdownEvent.is_set():
                         try:
                             transactionRequest = queue.get(timeout=0.01)
-                            transactionBatch.append(transactionRequest)
+                            # print(transactionRequest)
+                            if transactionRequest:
+                                transactionBatch.append(transactionRequest)
                         except QueueEmpty:
                             pass
 
-                        if (time.time() - startTime > 0.1 and transactionBatch) or len(transactionBatch) > 100:
+                        if (time.time() - startTime > 1.0 and transactionBatch) or len(transactionBatch) > 1000:
                             transactionsDb.insert_multiple(transactionBatch)
                             transactionBatch = []
                             startTime = time.time()
@@ -65,10 +67,16 @@ class StockAggregator:
                                 # print("Recieved request to :", stockId)
                                 stockQueues[stockId].put(request)
                                 # print("Sent the request")
+                        elif action == "remove-transaction":
+                            stockId = request.get("stockId")
+                            if stockId in stockQueues:
+                                stockQueues[stockId].put(request)
+
                         elif action == "addStock":
                             # No need to do anything here; stockQueues already updated
                             # print("Added New Stock")
                             pass
+                        
                         elif action == "removeStock":
                             stockId = request.get("stockId")
                             if stockId in stockQueues:
@@ -92,7 +100,7 @@ class StockAggregator:
                         except QueueEmpty:
                             pass
 
-                        if (time.time() - startTime > 0.1 and transactionBatch) or len(transactionBatch) > 100:
+                        if (time.time() - startTime > 1.0 and transactionBatch) or len(transactionBatch) > 1000:
                             internalTransactionsDb.insert_multiple(transactionBatch)
                             transactionBatch = []
                             startTime = time.time()
