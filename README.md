@@ -7,7 +7,7 @@
 2. Internal Order Protection & Time-Based Priority
 3. Supports multiple order type(market/limit/ioc/fok) with support for future integration
 4. High-Performance using multi-processing
-5. Ultra-Low latency of upto 0.0028 ms or 2.86 microseconds
+5. Lateny of around 2-5 µs per order simulating HFT
 6. Ability to add new stocks dynamically
 
 
@@ -24,7 +24,7 @@ Micro-Service Architecture
 5. Install the necessary packages using `pip install -r requirments.txt`
 6. Run the code using `python3 app.py`
 
-Now Head to `http://localhost:8000/docs` in your 
+Now Head to `http://localhost:8000/docs` in your machine or `http://your-ip-address:8000/docs` from any machine on the local network
 
 ### Benchmarking:
     Remote Client:
