@@ -1,3 +1,5 @@
+
+import os
 import time
 from queue import Empty as QueueEmpty
 from multiprocessing import Queue, Manager, Process, Event
@@ -32,7 +34,13 @@ class StockAggregator:
                 return False
 
         def restoreStocks():
-            pass
+            _stocks = os.listdir("database/stocks")
+            for stock in _stocks:
+                stockId = stock.split('.')[0]
+                self.addStock(stockId)
+                self.tradedStocks.append(stockId)
+
+            return True
 
         restoreUsers()  
         restoreStocks()
@@ -217,11 +225,20 @@ class StockAggregator:
         saveUsers()
 
 class TransactionEngine(StockAggregator):
-    def __init__(self, initialStocks=["btc"], minStocks = 100000):
+    def __init__(self, newStocks=["btc"], minStocks = 100000):
         super().__init__()
         self.initializeQueues()
         self.initializeProcesses()
         self.restoreState()
+
+        # If there are no users create admin user first
+        if not self.users:
+            self.users["admin"] = {"walletBalance": 10000000, "stocks": {}}
+
+        for stockId in newStocks:
+            if stockId not in self.tradedStocks:
+                self.addStock(stockId, addUser=True)
+        
     
     def addNewProcess(self, stockId, stockQueue, logQueue, internalQueue, dbQueue, stockTransaction):
         process = Process(target=matchingEngine,
@@ -268,4 +285,3 @@ class TransactionEngine(StockAggregator):
         return True
 
 me = TransactionEngine()
-
