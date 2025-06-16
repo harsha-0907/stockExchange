@@ -125,6 +125,7 @@ async def newTransaction(transactionRequest: TransactionIn):
 async def fetchBalance(uId: str):
     if uId in me.users:
         userData = me.users[uId]
+        return userData
     
     return formatResponse(statusCode=404, description="User Not Found", resource="input", state="user:notfound")
 
