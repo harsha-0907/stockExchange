@@ -7,9 +7,10 @@
 2. Internal Order Protection & Time-Based Priority
 3. Supports multiple order type(market/limit/ioc/fok) with support for future integration
 4. High-Performance using multi-processing
-5. Lateny of around 2-5 µs per order simulating HFT
-6. Ability to cancel transactions that are in progress
-7. Ability to levy charge a fixed amount of charge per transaction
+5. Lateny of around 2-5 µs per order resembling HFT
+6. Cancel transactions that are in progress
+7. Levy charge a fixed amount of charge per transaction
+8. Add new stock to the system hassle free with just name
 
 
 ### Architecture
