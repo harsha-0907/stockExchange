@@ -14,7 +14,7 @@ totalTimeTaken = 0
 async def lifespan(app: FastAPI):
     print("Starting the Engine")
     yield
-    me.stopProcesses()
+    me.stopEngine()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -50,4 +50,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Exiting")
         me.stockProcesses()
+
 
