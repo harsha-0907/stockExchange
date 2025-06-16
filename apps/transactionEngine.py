@@ -1,7 +1,7 @@
 import time
 from queue import Empty as QueueEmpty
 from multiprocessing import Queue, Manager, Process, Event
-from apps.database import transactionDb, internalTransactionDb
+from apps.database import transactionDb, internalTransactionDb, userDb
 from apps.matchingEngine import matchingEngine
 
 class StockAggregator:
@@ -14,6 +14,28 @@ class StockAggregator:
         self.users = self.manager.dict()
         self.stockQueues = self.manager.dict()
         self.stockTransactions = self.manager.dict()
+
+    def restoreState(self):
+        def restoreUsers():
+            try:
+                results = userDb.all()
+                for result in results:
+                    uId = result.get("uId")
+                    userData = result.get("userData")
+                    self.users[uId] = userData
+                self.numberOfUsers = len(self.users)
+                print(self.users)
+                return True
+        
+            except Exception as _e:
+                self.isWorking = False
+                return False
+
+        def restoreStocks():
+            pass
+
+        restoreUsers()  
+        restoreStocks()
 
     def initializeQueues(self):
         self.dbQueue = Queue()
@@ -130,11 +152,11 @@ class StockAggregator:
                             transactionBatch.append(event + str(time.time()) + '\n')
                         
                         if (time.time() - stTime > 1.0 and transactionBatch) or len(transactionBatch) > 1000:
-                            with open("system.log", 'a') as file:
+                            with open("logs/system.log", 'a') as file:
                                 file.write('\n'.join(transactionBatch))
                         
                     if len(transactionBatch):
-                        with open("system.log", 'a') as file:
+                        with open("logs/system.log", 'a') as file:
                                 file.write('\n'.join(transactionBatch))
                 except Exception as _e:
                     print("Error in Log Process :", str(_e))
@@ -167,16 +189,40 @@ class StockAggregator:
             else:
                 print("Clean Exit")
 
+    def stopEngine(self):
+        self.saveData()
+        self.stopProcesses()
+
+    def saveData(self):
+        def saveUsers():
+            try:
+                print("Saving User data to Storage")
+                userDb.truncate()
+                users = self.users
+                listOfUsers = []
+                for uId, userData in users.items():
+                    listOfUsers.append(
+                        {
+                            "uId": uId,
+                            "userData": userData
+                        }
+                    )
+                userDb.insert_multiple(listOfUsers)
+                return True
+            
+            except Exception as _e:
+                print("Unable to move data to Storage.\n Data Inconsistent")
+                return False
+        
+        saveUsers()
+
 class TransactionEngine(StockAggregator):
     def __init__(self, initialStocks=["btc"], minStocks = 100000):
         super().__init__()
         self.initializeQueues()
         self.initializeProcesses()
-        self.users["admin"] = {"walletBalance": 10000000, "stocks": {}}
-        for stockId in initialStocks:
-            print("Adding Stock", stockId)
-            self.isWorking = self.addStock(stockId) and self.isWorking
-        
+        self.restoreState()
+    
     def addNewProcess(self, stockId, stockQueue, logQueue, internalQueue, dbQueue, stockTransaction):
         process = Process(target=matchingEngine,
                           args=(stockTransaction, stockId, stockQueue, dbQueue, internalQueue, logQueue, self.users, self.shutdownEvent))
@@ -184,7 +230,7 @@ class TransactionEngine(StockAggregator):
         self.processes.append(process)
         return True
 
-    def addStock(self, stockId):
+    def addStock(self, stockId, addUser: bool = False):
         if stockId in self.tradedStocks:
             return False
 
@@ -200,23 +246,26 @@ class TransactionEngine(StockAggregator):
         self.transactionQueue.put(request)
         self.tradedStocks.append(stockId)
         self.addNewProcess(stockId, stockQueue, self.logQueue, self.internalTransactionQueue, self.dbQueue, stockTransaction)
-        initRequest = {
-            "tId": "1234567890123",
-            "uId": "admin",
-            "stockId": stockId,
-            "side": "sell",
-            "orderType": "limit",
-            "quantity": 100000,
-            "pricePerUnit": 100,
-            "status": "RECIEVED",
-            "action": "transaction",
-            "timeStamp": time.time()
-        }
-        self.dbQueue.put(initRequest)
-        self.transactionQueue.put(initRequest)
-        adminData = self.users["admin"]
-        adminData["stocks"][stockId] = 0
-        self.users["admin"] = adminData
+        
+        if addUser:
+            initRequest = {
+                "tId": "1234567890123",
+                "uId": "admin",
+                "stockId": stockId,
+                "side": "sell",
+                "orderType": "limit",
+                "quantity": 100000,
+                "pricePerUnit": 100,
+                "status": "RECIEVED",
+                "action": "transaction",
+                "timeStamp": time.time()
+            }
+            self.dbQueue.put(initRequest)
+            self.transactionQueue.put(initRequest)
+            adminData = self.users["admin"]
+            adminData["stocks"][stockId] = 0
+            self.users["admin"] = adminData
         return True
 
 me = TransactionEngine()
+
