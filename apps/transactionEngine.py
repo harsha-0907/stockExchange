@@ -115,8 +115,41 @@ class StockAggregator:
             process.start()
             self.processes.append(process)
 
+        def initializeLogProcess():
+            def logTransactions(queue: Queue, shutdownEvent):
+                stTime = time.time(); transactionBatch = []
+                try:
+                    while not shutdownEvent.is_set():
+                        try:
+                            event = queue.get(timeout=0.1)
+                        except QueueEmpty as qe:
+                            time.sleep(0.1)
+                            continue
+
+                        if event:
+                            transactionBatch.append(event + str(time.time()) + '\n')
+                        
+                        if (time.time() - stTime > 1.0 and transactionBatch) or len(transactionBatch) > 1000:
+                            with open("system.log", 'a') as file:
+                                file.write('\n'.join(transactionBatch))
+                        
+                    if len(transactionBatch):
+                        with open("system.log", 'a') as file:
+                                file.write('\n'.join(transactionBatch))
+                except Exception as _e:
+                    print("Error in Log Process :", str(_e))
+
+                finally:
+                    print("Exiting Log Process")
+                    return True
+            
+            process = Process(target=logTransactions, args=(self.logQueue, self.shutdownEvent))
+            process.start()
+            self.processes.append(process)
+
         self.processes = []
         self.stockProcesses = {}
+        initializeLogProcess()
         initializeDBProcess()
         initializeSegregator()
         initializeInternalTransactionProcess()
