@@ -179,8 +179,8 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                 }
 
                 dbTransactionRequest = {
-                    "tId": sellerTid,
-                    "uId": sellerId,
+                    "tId": buyerTid,
+                    "uId": buyerrId,
                     "stockId": stockId,
                     "side": "buy",
                     "orderType": "market",
@@ -299,8 +299,8 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                 }
 
                 dbTransactionRequest = {
-                    "sellerId": sellerId,
-                    "sellerTid": sellerTid,
+                    "uId": sellerId,
+                    "tId": sellerTid,
                     "stockId": stockId,
                     "side": "sell",
                     "orderType": "limit",
@@ -393,8 +393,8 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
 
                 internalTransactionRequest = {
                     "stockId": stockId,
-                    "sellerId": sellerId,
-                    "sellerTid": sellerTid,
+                    "sellerId": buyerId,
+                    "sellerTid": buyerTid,
                     "buyerId": buyerId,
                     "buyerTid": buyerTid,
                     "noOfStocks": numberOfStocksInTransaction,
@@ -935,8 +935,8 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
 
                 internalTransactionRequest = {
                     "stockId": stockId,
-                    "sellerId": sellerId,
-                    "sellerTid": sellerTid,
+                    "sellerId": buyerId,
+                    "sellerTid": buyerTid,
                     "buyerId": buyerId,
                     "buyerTid": buyerTid,
                     "noOfStocks": stocksInThisTransaction,
