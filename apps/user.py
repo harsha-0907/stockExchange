@@ -123,8 +123,10 @@ async def newTransaction(transactionRequest: TransactionIn):
     
 @router.get("/details")
 async def fetchBalance(uId: str):
-    userData = me.users[uId]
-    return userData
+    if uId in me.users:
+        userData = me.users[uId]
+    
+    return formatResponse(statusCode=404, description="User Not Found", resource="input", state="user:notfound")
 
 @router.get("/stock/fetchBBO")
 async def fetchBBO(stockId: str):
