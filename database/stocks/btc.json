@@ -1,0 +1,22 @@
+{
+    "buy": [],
+    "sell": [
+        [
+            100,
+            1750072744.674325,
+            {
+                "tId": "1234567890123",
+                "uId": "admin",
+                "stockId": "btc",
+                "side": "sell",
+                "orderType": "limit",
+                "quantity": 100000,
+                "pricePerUnit": 100,
+                "status": "RECIEVED",
+                "action": "transaction",
+                "timeStamp": 1750072744.674325
+            }
+        ]
+    ],
+    "marketPrice": 0.0
+}
