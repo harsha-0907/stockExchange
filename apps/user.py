@@ -25,6 +25,8 @@ def pushTransaction(transactionRequest):
         transactionRequest["timeStamp"] = time.time()
         side = transactionRequest.get("side")
         tId = uuid4().hex; status = "RECIEVED"
+
+        print(tId)
         
         if side == "buy":
             pricePerUnit = transactionRequest.get("pricePerUnit")
@@ -79,7 +81,7 @@ async def newUser():
     # Add the user into the database and add into the TransactionEngine
     uId = "user" + str(me.numberOfUsers + 1)
     me.numberOfUsers += 1
-    me.users[uId] = {"walletBalance": 0.00, "stocks": {}}
+    me.users[uId] = {"walletBalance": 0.00, "stocks": {}, "advanced": {}}
     return uId
 
 @router.get("/finance/add")
@@ -184,3 +186,10 @@ async def deleteTransaction(uId: str, tId: str):
 
     return formatResponse(statusCode=200, description="Cancellation Reuqest Submitted", resource="transaction", state="action:success")
       
+@router.get("/stocks")
+async def fetchTradedStocks():
+    # Returns all the stocks that are traded by the trading engine
+    return {
+        "statusCode": 200,
+        "tradedStocks": me.tradedStocks
+    }
