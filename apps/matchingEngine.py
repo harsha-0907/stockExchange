@@ -180,7 +180,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
 
                 dbTransactionRequest = {
                     "tId": buyerTid,
-                    "uId": buyerrId,
+                    "uId": buyerId,
                     "stockId": stockId,
                     "side": "buy",
                     "orderType": "market",
