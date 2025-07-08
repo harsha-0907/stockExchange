@@ -39,7 +39,6 @@ class StockAggregator:
                 stockId = stock.split('.')[0]
                 self.addStock(stockId)
                 self.tradedStocks.append(stockId)
-
             return True
 
         restoreUsers()  
@@ -65,7 +64,7 @@ class StockAggregator:
                         except QueueEmpty:
                             pass
 
-                        if (time.time() - startTime > 1.0 and transactionBatch) or len(transactionBatch) > 1000:
+                        if (time.time() - startTime > 1.0 and len(transactionBatch) > 0) or len(transactionBatch) > 1000:
                             transactionsDb.insert_multiple(transactionBatch)
                             transactionBatch = []
                             startTime = time.time()
@@ -130,7 +129,7 @@ class StockAggregator:
                         except QueueEmpty:
                             pass
 
-                        if (time.time() - startTime > 1.0 and transactionBatch) or len(transactionBatch) > 1000:
+                        if (time.time() - startTime > 1.0 and len(transactionBatch) > 0) or len(transactionBatch) > 1000:
                             internalTransactionsDb.insert_multiple(transactionBatch)
                             transactionBatch = []
                             startTime = time.time()
@@ -225,7 +224,7 @@ class StockAggregator:
         saveUsers()
 
 class TransactionEngine(StockAggregator):
-    def __init__(self, newStocks=["btc"], minStocks = 100000):
+    def __init__(self, newStocks=["btc", "gold", "usd"], minStocks = 100000):
         super().__init__()
         self.initializeQueues()
         self.initializeProcesses()
