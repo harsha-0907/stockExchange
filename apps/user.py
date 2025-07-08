@@ -82,7 +82,10 @@ async def newUser():
     uId = "user" + str(me.numberOfUsers + 1)
     me.numberOfUsers += 1
     me.users[uId] = {"walletBalance": 0.00, "stocks": {}, "advanced": {}}
-    return uId
+    return {
+        "statusCode": 200,
+        "userId": uId
+    }
 
 @router.get("/finance/add")
 async def addMoney(amount: float, uId: str):
