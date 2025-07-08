@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 import apps.database as db
 from apps.transactionEngine import me
-from apps import user
+from apps import user, stock, transactions
 import uvicorn
 from sys import exit
 
@@ -34,6 +34,8 @@ def calculateProcessingTime(request: Request, call_next):
     return response
 
 app.include_router(user.router, prefix="/user", tags=["user"])
+app.include_router(stock.router, prefix="/stock", tags=["stock"])
+app.include_router(transactions.router, prefix="/transaction", tags=["transaction"])
 
 @app.get("/")
 def getHomePage():
