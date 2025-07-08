@@ -223,7 +223,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                     "timeStamp": timeStamp
                 }
 
-                return [], [dbTransactions], [userTransactionRequest]
+                return [], [dbTransactionRequest], [userTransactionRequest]
 
             dbTransactionRequest = {
                 "tId": sellerTid,
@@ -244,7 +244,6 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
                 "uId": sellerId,
                 "quantity": totalAmountRecieved
             }
-
             userTransactions.append(userTransactionRequest)
 
             if numberOfStocksToSell > 0:
@@ -1151,6 +1150,7 @@ def matchingEngine(mainTransactions, stockId, queue, dbQueue, iTQueue, logQueue,
             if dbTxns:
                 for txn in dbTxns:
                     if isinstance(txn, list):
+                        print(txn)
                         txn = txn[0]
                     dbQueue.put(txn)
             
