@@ -1,6 +1,6 @@
-# CryptoExchange
+# StockExchange
 
-## A Leading Cryptocurrency exchange platform
+## A Leading Stock exchange platform
 
 ### ABOUT THIS PROJECT (FEATURES)
 1. Built Matching Engine with REG-NMS principles in consideration
